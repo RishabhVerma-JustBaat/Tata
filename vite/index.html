@@ -1,16 +1,127 @@
-
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Animate CTAs from Bottom</title>
-      <script type="module" crossorigin src="vite/assets/index-D5P6ds3u.js"></script>
-      <link rel="stylesheet" crossorigin href="vite/assets/index-E-i_Yt3z.css">
-    </head>
-
-    <body>
-      <div id="root"></div>
-    </body>
-  </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTA Animation - TATA Housing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
   
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f5f5f5;
+    }
+
+    .cta-container {
+      position: relative;
+      width: 320px;
+      height: 480px;
+      background: white;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .background-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .background-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cta-button {
+      position: absolute;
+      background: #f8eaa3;
+      border: 1px solid #ae872a;
+      border-radius: 6px;
+      padding: 9px 10px;
+      font-family: 'Inter', sans-serif;
+      font-weight: bold;
+      font-size: 12px;
+      color: #1b2953;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      
+      /* Start from below the viewport */
+      transform: translateY(200px);
+      opacity: 0;
+      
+      /* Animation */
+      animation: slideUp 0.8s ease-out forwards;
+    }
+
+    .cta-button:hover {
+      transform: translateY(0) scale(1.05);
+    }
+
+    .cta-button:active {
+      transform: translateY(0) scale(0.95);
+    }
+
+    .cta-button-1 {
+      left: 19px;
+      top: 412px;
+      animation-delay: 0.2s;
+    }
+
+    .cta-button-2 {
+      left: 113px;
+      top: 412px;
+      animation-delay: 0.4s;
+    }
+
+    @keyframes slideUp {
+      0% {
+        transform: translateY(200px);
+        opacity: 0;
+      }
+      60% {
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+      80% {
+        transform: translateY(5px);
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cta-container">
+    <div class="background-image">
+      <!-- Replace this src with your actual image URL -->
+      <img src="320x480.jpg" alt="TATA Housing - Ready to Move-in Homes">
+    </div>
+    
+    <button class="cta-button cta-button-1" onclick="window.location.href=`https://www.google.com/maps/place/22%C2%B031'20.4%22N+88%C2%B019'22.0%22E/@22.5223333,88.3227778,17z/data=!3m1!4b1!4m4!3m3!8m2!3d22.5223333!4d88.3227778?entry=ttu&g_ep=EgoyMDI2MDEyNy4wIKXMDSoASAFQAw%3D%3D`">
+      Visit Now
+    </button>
+    
+    <button class="cta-button cta-button-2" onclick="window.location.href='https://www.tatahousing.com/campaign/88-east?utm_source=Posterscope&utm_medium=Google&utm_campaign=IOOH&cid=701fw00000Cb0WnAAJ'">
+      Enquire Now
+    </button>
+  </div>
+</body>
+</html>
