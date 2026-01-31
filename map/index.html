@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Map with Directions</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .loading p {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #e74c3c;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        /* Custom marker styles */
+        .start-marker {
+            background-color: #2196F3;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .end-marker {
+            background-color: #F44336;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Information Panel */
+        .info-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a5f3f;
+            color: white;
+            padding: 20px;
+            z-index: 1000;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-panel h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .info-item svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .info-item span {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .info-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .info-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #d4a574;
+            color: #333;
+            transition: background 0.3s;
+        }
+
+        .info-btn:hover {
+            background: #c49564;
+        }
+
+        .info-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Hide the routing directions panel */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Getting your location...</p>
+        <p style="font-size: 12px; color: #666;">Please allow location access</p>
+    </div>
+    <div id="error" class="error" style="display: none;"></div>
+    
+    <!-- Information Panel -->
+    <div class="info-panel" id="infoPanel">
+        <h2 id="propertyTitle">Serein by Tata Housing</h2>
+        <div class="info-item">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+            </svg>
+            <span id="propertyAddress">Serein, Pokharan Rd No. 2, Near Siddhachal Housing Society, Pawar Nagar, Thane West, Thane, Maharashtra 400601</span>
+        </div>
+        <div class="info-item">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l1.106 4.423a1 1 0 01-.54 1.06l-1.7.85a1 1 0 00-.445 1.514l3.464 6.352a1 1 0 00.9.514h6.618a1 1 0 00.9-.514l3.464-6.352a1 1 0 00-.445-1.514l-1.7-.85a1 1 0 01-.54-1.06l1.106-4.423A1 1 0 0115.847 2H18a1 1 0 110 2h-2.153l-1.106 4.423a3 3 0 01-1.62 3.18l1.7.85a3 3 0 011.336 4.542l-3.464 6.352H9.382l-3.464-6.352a3 3 0 011.336-4.542l1.7-.85a3 3 0 01-1.62-3.18L5.153 4H3a1 1 0 01-1-1z"/>
+            </svg>
+            <span id="propertyPhone">1800 266 8566</span>
+        </div>
+        <div class="info-item">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+            <span id="propertyHours">09:00 am - 06:00 pm</span>
+        </div>
+        <div class="info-buttons">
+            <button class="info-btn" id="callBtn" onclick="callNow()">CALL NOW</button>
+            <button class="info-btn" id="knowMoreBtn" onclick="knowMore()">KNOW MORE</button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    
+    <script>
+        let map;
+        let routingControl;
+        let startMarker;
+        let endMarker;
+
+        // Fixed end location - Change these coordinates to your desired destination
+        const endLocation = [22.5726, 88.3639]; // [latitude, longitude] - Kolkata, West Bengal
+
+        // End location label
+        const endLocationLabel = "Serein by Tata Housing";
+        
+        // Property information
+        const propertyInfo = {
+            title: "Serein by Tata Housing",
+            address: "Serein, Pokharan Rd No. 2, Near Siddhachal Housing Society, Pawar Nagar, Thane West, Thane, Maharashtra 400601",
+            phone: "1800 266 8566",
+            hours: "09:00 am - 06:00 pm"
+        };
+        
+        // Button click handlers
+        function callNow() {
+            window.location.href = `tel:${propertyInfo.phone.replace(/\s/g, '')}`;
+        }
+        
+        function knowMore() {
+            // Add your "Know More" action here
+            alert('Know More clicked! Add your custom action here.');
+        }
+
+        function initMap() {
+            // Initialize map with OpenStreetMap tiles
+            map = L.map('map').setView([22.5726, 88.3639], 13);
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Get user's current location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const startLocation = [position.coords.latitude, position.coords.longitude];
+
+                        // Hide loading
+                        document.getElementById('loading').style.display = 'none';
+
+                        // Add custom markers
+                        addMarkers(startLocation, endLocation);
+
+                        // Calculate and display route
+                        calculateRoute(startLocation, endLocation);
+                    },
+                    function(error) {
+                        // Handle geolocation errors
+                        document.getElementById('loading').style.display = 'none';
+                        const errorDiv = document.getElementById('error');
+                        errorDiv.style.display = 'block';
+                        
+                        let errorMessage = 'Unable to get your location. ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += 'Location access denied by user.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += 'Location information unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += 'Location request timed out.';
+                                break;
+                            default:
+                                errorMessage += 'An unknown error occurred.';
+                                break;
+                        }
+                        errorDiv.textContent = errorMessage;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 600000, // 10 minutes - increased to prevent timeout for long durations and allow time for user to grant permission
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                // Browser doesn't support geolocation
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Geolocation is not supported by your browser.';
+            }
+        }
+
+        function addMarkers(start, end) {
+            // Create custom icon for start marker (blue)
+            const startIcon = L.divIcon({
+                className: 'custom-marker',
+                html: '<div class="start-marker"></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+
+            // Create custom icon for end marker (red)
+            const endIcon = L.divIcon({
+                className: 'custom-marker',
+                html: '<div class="end-marker"></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+
+            // Add start marker
+            startMarker = L.marker(start, { icon: startIcon })
+                .addTo(map)
+                .bindPopup('<b>Your Location</b><br>Start Point');
+
+            // Add end marker
+            endMarker = L.marker(end, { icon: endIcon })
+                .addTo(map)
+                .bindPopup(`<b>${endLocationLabel}</b><br>Destination`);
+        }
+
+        function calculateRoute(start, end) {
+            // Remove existing routing control if any
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+
+            // Create routing control
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(start[0], start[1]),
+                    L.latLng(end[0], end[1])
+                ],
+                routeWhileDragging: false,
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    timeout: 600000 // 10 minutes - increased to prevent timeout for long durations
+                }),
+                lineOptions: {
+                    styles: [
+                        {color: '#4285F4', opacity: 0.8, weight: 5}
+                    ]
+                },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                showAlternatives: false,
+                createMarker: function() { return null; } // Don't create default markers, we have custom ones
+            }).addTo(map);
+
+            // Fit map to show both markers with padding for info panel
+            const group = new L.featureGroup([startMarker, endMarker]);
+            const bounds = group.getBounds();
+            const padding = [50, 50, 200, 50]; // top, right, bottom, left - extra bottom padding for info panel
+            map.fitBounds(bounds, { padding: padding });
+        }
+
+        // Initialize map when page loads
+        window.onload = initMap;
+    </script>
+</body>
+</html>
